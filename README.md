@@ -29,11 +29,26 @@
 - ห้ามใส่ service-role key, secret key หรือรหัสผ่านฐานข้อมูลใน frontend, GitHub หรือไฟล์ environment ที่ถูกเผยแพร่
 - หากยังไม่ตั้งค่า environment เว็บไซต์จะอยู่ใน DEMO PREVIEW ข้อมูลตัวอย่างไม่ถูกบันทึกถาวร
 - แม้เชื่อม Supabase client แล้ว การสร้าง/ค้นหาออเดอร์ยังไม่พร้อมใช้งานจริง: schema ตั้งใจไม่เปิด public insert/select บนตาราง orders แต่หน้าเว็บปัจจุบันยังเรียกตาราง orders โดยตรง จึงต้องเปลี่ยนไปใช้ Edge Functions ที่ตรวจสอบข้อมูลและสิทธิ์ก่อนเปิดรับออเดอร์
+- เพิ่ม Edge Functions `create-order` และ `lookup-order` เพื่อไม่ให้หน้าเว็บเรียกตาราง `orders` โดยตรง โดยฝั่ง server อ่านราคาแพ็กเกจจาก `products` และส่งกลับเฉพาะข้อมูลอ้างอิง/สถานะที่จำเป็น
+- ก่อนเปิดใช้ฟังก์ชัน ต้อง deploy migration `supabase/migrations/202611250001_seed_topup_products.sql` และ deploy Edge Functions ทั้งสองตัวไปยัง Supabase project เดียวกับเว็บไซต์
 - ยังไม่ใช่ระบบรับชำระเงินจริง และยังไม่มีระบบอัปโหลด/ตรวจสอบสลิปหรือหน้าแอดมิน
 - การออกหมายเลขคิวต้องทำฝั่ง server ใน transaction หรือ RPC เพื่อป้องกันเลขคิวซ้ำและการปลอมสถานะ
 - เก็บ LINE channel access token และ service-role key ไว้ใน Edge Function secrets เท่านั้น
 - LINE notifications ต้องมี LINE Official Account, Messaging API และการผูก userId ของลูกค้าก่อนส่ง push message ได้
 - QR PromptPay, บัญชีธนาคาร, ราคาจริง, แพ็กเกจจริง และช่องทางติดต่อยังเป็นข้อมูล placeholder ต้องใส่จากหลังบ้านก่อนเปิดร้าน
+
+## Deploy order functions to Supabase
+
+หลังติดตั้ง Supabase CLI และ login แล้ว ให้รันจากโฟลเดอร์โปรเจกต์:
+
+```bash
+supabase link --project-ref hahjzoeooomutcczyptd
+supabase db push
+supabase functions deploy create-order
+supabase functions deploy lookup-order
+```
+
+ฟังก์ชันใช้ `SUPABASE_URL` และ `SUPABASE_SERVICE_ROLE_KEY` ที่ Supabase จัดเตรียมให้ใน runtime ของ Edge Functions เท่านั้น ห้ามคัดลอก service role key ลง Vercel หรือ frontend
 
 ## โครงสร้าง
 - `src/App.jsx` — หน้าร้านและหน้าติดตามคิว
