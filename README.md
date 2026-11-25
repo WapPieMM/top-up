@@ -11,20 +11,27 @@
 - Responsive สำหรับมือถือ, iPad และคอมพิวเตอร์
 - โครงสร้างฐานข้อมูล Supabase เบื้องต้น
 
-## ต้องตั้งค่าก่อนใช้งานจริง
-1. ติดตั้ง Node.js รุ่น LTS บนคอมพิวเตอร์
-2. แตกไฟล์ ZIP แล้วเปิดโฟลเดอร์โปรเจกต์
-3. รัน `npm install`
-4. คัดลอก `.env.example` เป็น `.env` แล้วใส่ Supabase Project URL และ anon key
-5. เปิด Supabase SQL Editor แล้วรัน `supabase/schema.sql`
-6. รัน `npm run dev` เพื่อดูหน้าเว็บ
+## ตั้งค่า Supabase
 
-## ข้อควรทราบสำคัญ
-- หากยังไม่ตั้งค่า Supabase เว็บไซต์จะอยู่ใน DEMO PREVIEW ข้อมูลตัวอย่างไม่ถูกบันทึกถาวร
-- ตัวอย่างนี้ยังไม่ใช่ระบบรับชำระเงินจริง และยังไม่เปิดให้ลูกค้าส่งออเดอร์เข้า database โดยตรง
-- ก่อนเปิดใช้งานจริง ควรสร้าง Supabase Edge Functions สำหรับสร้างออเดอร์, อัปโหลดสลิป, ตรวจสอบสิทธิ์แอดมิน และอนุมัติการชำระเงิน
+1. ติดตั้ง Node.js รุ่น LTS และรัน `npm install`
+2. คัดลอกไฟล์ `.env.example` เป็น `.env.local`
+3. กรอกค่าจาก Supabase Project Settings → API:
+   - `VITE_SUPABASE_URL` = Project URL
+   - `VITE_SUPABASE_ANON_KEY` = Publishable key (หรือ anon key แบบเดิม)
+4. รัน `npm run dev` แล้วเปิดเว็บตาม URL ที่ Vite แสดง
+5. หาก deploy ผ่าน Vercel ให้เพิ่ม Environment Variables ชื่อเดียวกันใน Project Settings → Environment Variables แล้ว redeploy
+
+ไฟล์ `.env.local` ถูก ignore โดย Git และไม่ควร commit ขึ้น repository
+
+## ข้อควรทราบด้านความปลอดภัยและสถานะปัจจุบัน
+- `src/lib/supabase.js` เตรียม Supabase client โดยอ่านค่าจาก Vite environment variables เท่านั้น
+- Publishable/anon key ใช้ใน browser ได้เมื่อเปิด RLS และกำหนด policies อย่างถูกต้อง
+- ห้ามใส่ service-role key, secret key หรือรหัสผ่านฐานข้อมูลใน frontend, GitHub หรือไฟล์ environment ที่ถูกเผยแพร่
+- หากยังไม่ตั้งค่า environment เว็บไซต์จะอยู่ใน DEMO PREVIEW ข้อมูลตัวอย่างไม่ถูกบันทึกถาวร
+- แม้เชื่อม Supabase client แล้ว การสร้าง/ค้นหาออเดอร์ยังไม่พร้อมใช้งานจริง: schema ตั้งใจไม่เปิด public insert/select บนตาราง orders แต่หน้าเว็บปัจจุบันยังเรียกตาราง orders โดยตรง จึงต้องเปลี่ยนไปใช้ Edge Functions ที่ตรวจสอบข้อมูลและสิทธิ์ก่อนเปิดรับออเดอร์
+- ยังไม่ใช่ระบบรับชำระเงินจริง และยังไม่มีระบบอัปโหลด/ตรวจสอบสลิปหรือหน้าแอดมิน
 - การออกหมายเลขคิวต้องทำฝั่ง server ใน transaction หรือ RPC เพื่อป้องกันเลขคิวซ้ำและการปลอมสถานะ
-- เก็บ LINE channel access token และ service-role key ไว้ใน Edge Function secrets เท่านั้น ห้ามใส่ในโค้ด frontend หรือไฟล์ `.env` ที่ถูกเผยแพร่
+- เก็บ LINE channel access token และ service-role key ไว้ใน Edge Function secrets เท่านั้น
 - LINE notifications ต้องมี LINE Official Account, Messaging API และการผูก userId ของลูกค้าก่อนส่ง push message ได้
 - QR PromptPay, บัญชีธนาคาร, ราคาจริง, แพ็กเกจจริง และช่องทางติดต่อยังเป็นข้อมูล placeholder ต้องใส่จากหลังบ้านก่อนเปิดร้าน
 
@@ -35,10 +42,11 @@
 - `supabase/schema.sql` — โครงสร้างฐานข้อมูลเริ่มต้น
 
 ## งานที่ควรทำในเฟสถัดไป
-1. ระบบล็อกอินแอดมินและสิทธิ์ admin
-2. หน้าหลังบ้านจัดการสินค้า/ราคา/ออเดอร์/คิว
-3. Edge Function สำหรับสร้างออเดอร์และอัปโหลดสลิป
-4. ฟังก์ชันอนุมัติสลิปและออกคิวอัตโนมัติ
-5. ระบบเรียกคิวและอัปเดตสถานะผ่าน Realtime
-6. LINE Messaging API ผ่าน Edge Function
-7. ตั้งค่า Storage bucket แบบ private สำหรับสลิป พร้อม signed URL
+1. สร้าง Edge Function สำหรับสร้างออเดอร์และค้นหาสถานะด้วยรหัสอ้างอิงที่ปลอดภัย
+2. ระบบล็อกอินแอดมินและสิทธิ์ admin
+3. หน้าหลังบ้านจัดการสินค้า/ราคา/ออเดอร์/คิว
+4. Edge Function สำหรับอัปโหลดสลิปและอนุมัติการชำระเงิน
+5. ฟังก์ชันอนุมัติสลิปและออกคิวอัตโนมัติ
+6. ระบบเรียกคิวและอัปเดตสถานะผ่าน Realtime
+7. LINE Messaging API ผ่าน Edge Function
+8. ตั้งค่า Storage bucket แบบ private สำหรับสลิป พร้อม signed URL
