@@ -58,8 +58,11 @@ export default function App() {
     };
 
     if (supabase) {
-      const { data, error } = await supabase.from("orders").insert(payload).select("id,status,queue_number").single();
-      if (error) { setNotice("ส่งคำสั่งซื้อไม่สำเร็จ กรุณาลองใหม่หรือติดต่อร้าน"); return; }
+      const { data, error } = await supabase.functions.invoke("create-order", { body: payload });
+      if (error || !data?.id) {
+        setNotice(data?.error || "ส่งคำสั่งซื้อไม่สำเร็จ กรุณาลองใหม่หรือติดต่อร้าน");
+        return;
+      }
       setOrder(data);
     } else {
       const demo = { id: "DEMO-" + Math.random().toString(36).slice(2, 8).toUpperCase(), status: "awaiting_payment", queue_number: null };
@@ -77,11 +80,11 @@ export default function App() {
       setLookup({ id: lookupId.trim(), status: "awaiting_payment", queue_number: null, demo: true });
       return;
     }
-    const { data, error } = await supabase.from("orders")
-      .select("id,status,queue_number,created_at")
-      .eq("id", lookupId.trim()).maybeSingle();
-    setLookup(error || !data ? null : data);
-    if (error || !data) setNotice("ไม่พบรายการ กรุณาตรวจสอบเลขคำสั่งซื้อ");
+    const { data, error } = await supabase.functions.invoke("lookup-order", {
+      body: { id: lookupId.trim() }
+    });
+    setLookup(error || !data?.id ? null : data);
+    if (error || !data?.id) setNotice(data?.error || "ไม่พบรายการ กรุณาตรวจสอบเลขคำสั่งซื้อ");
   }
 
   const activeOrder = lookup || order;
